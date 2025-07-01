@@ -11,7 +11,9 @@ app = FastAPI(
     version="1.0.0"
 )
 
-templates = Jinja2Templates(directory="app/templates")
+##templates = Jinja2Templates(directory="app/templates")
+templates = Jinja2Templates(directory="templates")
+
 
 # Enable CORS for external requests (optional)
 app.add_middleware(
