@@ -8,7 +8,38 @@ xgb_model = xgb.XGBRegressor()
 xgb_model.load_model("models/xgboost_model.json")
 scaler = joblib.load("models/scaler.pkl")
 
-# Signal generator
+# Custom CSS for dark mode and Bootstrap feel
+st.markdown("""
+    <style>
+    body {
+        background-color: #121212;
+        color: #ffffff;
+    }
+    .main {
+        background-color: #1e1e1e;
+        padding: 2rem;
+        border-radius: 10px;
+    }
+    .stTextInput, .stNumberInput, .stButton {
+        background-color: #333333 !important;
+        color: #ffffff !important;
+    }
+    h1, h2, h3 {
+        color: #f39c12;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+# Header
+st.title("📈 Gold Price Forecast (XAUUSD)")
+st.markdown("AI-powered prediction & trading signal generator using XGBoost", unsafe_allow_html=True)
+
+# Input
+st.subheader("Enter the last 60 closing prices:")
+user_input = st.text_area("Closing prices (comma-separated)", height=150)
+
+threshold = st.slider("Signal Threshold", 0.0, 0.05, 0.002, step=0.001)
+
 def generate_signal(predicted_price, current_price, threshold=0.002):
     diff_ratio = (predicted_price - current_price) / current_price
     if diff_ratio > threshold:
@@ -18,16 +49,18 @@ def generate_signal(predicted_price, current_price, threshold=0.002):
     else:
         return "HOLD"
 
-# Forecast function
 def forecast_next(close_prices: list, threshold: float = 0.002):
     if len(close_prices) < 60:
         raise ValueError("Input must have at least 60 closing prices.")
-    
+
     recent_data = np.array(close_prices[-60:]).reshape(-1, 1)
     scaled = scaler.transform(recent_data)
     X_xgb = scaled.reshape(1, 60)
-    predicted_scaled = xgb_model.predict(X_xgb)[0]
+
+    xgb_pred = xgb_model.predict(X_xgb)
+    predicted_scaled = xgb_pred[0]
     predicted_price = scaler.inverse_transform([[predicted_scaled]])[0][0]
+
     current_price = close_prices[-1]
     signal = generate_signal(predicted_price, current_price, threshold)
 
@@ -49,27 +82,14 @@ def forecast_next(close_prices: list, threshold: float = 0.002):
         "stop_loss": round(sl, 3)
     }
 
-# Streamlit UI
-st.set_page_config(page_title="XAUUSD Forecast", layout="centered")
-st.title("📊 XAUUSD Forecast & Trade Signal")
-
-st.markdown("Enter the last 60 close prices of gold (XAUUSD) to forecast the next price and receive a trading signal.")
-
-input_prices = st.text_area("Close Prices (comma-separated):", height=150)
-threshold = st.slider("Signal Sensitivity Threshold", 0.0, 0.01, 0.002, step=0.001)
-
+# Prediction
 if st.button("Predict"):
     try:
-        prices = [float(p.strip()) for p in input_prices.split(",") if p.strip()]
+        prices = [float(x.strip()) for x in user_input.split(",") if x.strip()]
         result = forecast_next(prices, threshold)
-
-        st.success("✅ Prediction successful!")
-        st.write(f"**Predicted Price:** ${result['predicted_price']}")
-        st.write(f"**Current Price:** ${result['current_price']}")
-        st.write(f"**Signal:** 🟢 {result['signal']}")
-        st.write(f"**Take Profit (TP):** ${result['take_profit']}")
-        st.write(f"**Stop Loss (SL):** ${result['stop_loss']}")
-    except ValueError as ve:
-        st.error(f"⚠️ Input Error: {ve}")
+        st.success(f"📊 Predicted Price: ${result['predicted_price']}")
+        st.info(f"💡 Signal: {result['signal']}")
+        st.markdown(f"✅ Take Profit: ${result['take_profit']}")
+        st.markdown(f"❌ Stop Loss: ${result['stop_loss']}")
     except Exception as e:
-        st.error(f"❌ Server Error: {e}")
+        st.error(f"⚠️ Error: {e}")
