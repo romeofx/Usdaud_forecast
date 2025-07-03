@@ -114,3 +114,9 @@ if st.button("🔮 Predict"):
         st.markdown(f"❌ Stop Loss: ${result['stop_loss']}")
     except Exception as e:
         st.error(f"⚠️ Error: {e}")
+
+# === Call to Action (CTA): Signup
+st.markdown("---")
+st.markdown("### ✉️ Stay Updated with Trading Signals")
+signup_url = "https://formspree.io/f/mpwrnoqv"  # Replace with your own Formspree ID
+st.markdown(f"[📝 Click here to sign up]({signup_url})", unsafe_allow_html=True)
