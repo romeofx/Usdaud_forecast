@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import joblib
 import xgboost as xgb
+import requests
 
 # === Load model and scaler
 xgb_model = xgb.XGBRegressor()
@@ -115,8 +116,31 @@ if st.button("🔮 Predict"):
     except Exception as e:
         st.error(f"⚠️ Error: {e}")
 
-# === Call to Action (CTA): Signup
+# === Contact Form (Formspree)
 st.markdown("---")
-st.markdown("### ✉️ Stay Updated with Trading Signals")
-signup_url = "https://formspree.io/f/mpwrnoqv"  # Replace with your own Formspree ID
-st.markdown(f"[📝 Click here to sign up]({signup_url})", unsafe_allow_html=True)
+st.subheader("📬 Contact or Subscribe")
+
+with st.form("contact_form", clear_on_submit=True):
+    name = st.text_input("Name")
+    email = st.text_input("Email")
+    message = st.text_area("Message")
+    submit = st.form_submit_button("Send")
+
+    if submit:
+        if not name or not email or not message:
+            st.warning("⚠️ Please fill out all fields.")
+        else:
+            form_data = {
+                "name": name,
+                "email": email,
+                "message": message
+            }
+            formspree_url = "https://formspree.io/f/mpwrnoqv"  # Your actual endpoint
+            try:
+                response = requests.post(formspree_url, data=form_data)
+                if response.status_code == 200 or response.status_code == 202:
+                    st.success("✅ Message sent successfully!")
+                else:
+                    st.error(f"❌ Failed to send message. (Status: {response.status_code})")
+            except Exception as e:
+                st.error(f"⚠️ Error sending message: {e}")
