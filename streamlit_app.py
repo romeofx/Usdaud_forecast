@@ -118,7 +118,7 @@ if st.button("🔮 Predict"):
 
 # === Contact Form (Formspree)
 st.markdown("---")
-st.subheader("📬 Contact or Subscribe")
+st.subheader("📬 Stay Updated with Trading Signals")
 
 with st.form("contact_form", clear_on_submit=True):
     name = st.text_input("Name")
@@ -144,3 +144,4 @@ with st.form("contact_form", clear_on_submit=True):
                     st.error(f"❌ Failed to send message. (Status: {response.status_code})")
             except Exception as e:
                 st.error(f"⚠️ Error sending message: {e}")
+
