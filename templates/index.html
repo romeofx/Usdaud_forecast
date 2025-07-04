@@ -12,9 +12,7 @@
       background: #0d1117;
       color: #e6edf3;
     }
-    .gold-accent {
-      color: #FFD700;
-    }
+    .gold-accent { color: #FFD700; }
     .glass-card {
       background: rgba(255, 255, 255, 0.05);
       border: 1px solid rgba(255, 255, 255, 0.1);
@@ -45,12 +43,13 @@
 </head>
 <body>
   <div class="container py-5">
-    <div class="glass-card p-4">
+    <div class="glass-card p-4 mb-5">
       <div class="mb-4 text-center">
         <h2 class="gold-accent">XAUUSD AI Forecast</h2>
         <p class="text-muted">Powered by XGBoost | Real-time Signal (Buy/Sell/Hold)</p>
       </div>
 
+      <!-- Prediction Form -->
       <form id="predictForm">
         <div class="mb-3">
           <label for="closePrices" class="form-label">Enter last 60 close prices (comma-separated)</label>
@@ -63,6 +62,7 @@
         <button type="submit" class="btn btn-gold w-100">🔍 Predict</button>
       </form>
 
+      <!-- Result -->
       <div class="mt-4" id="result" style="display: none;">
         <h5 class="gold-accent mb-3">📊 Prediction Result:</h5>
         <ul class="list-group list-group-flush">
@@ -74,9 +74,27 @@
         </ul>
       </div>
     </div>
+
+    <!-- Subscription Form -->
+    <div class="glass-card p-4">
+      <div class="text-center mb-3">
+        <h4 class="gold-accent">💌 Stay Updated</h4>
+        <p class="text-muted">Get notified when forecasts are updated</p>
+      </div>
+
+      <form id="subscribeForm">
+        <div class="mb-3">
+          <input type="email" class="form-control" id="subEmail" placeholder="Your email address" required>
+        </div>
+        <button type="submit" class="btn btn-gold w-100">📬 Subscribe</button>
+      </form>
+
+      <div id="subMessage" class="text-center mt-3"></div>
+    </div>
   </div>
 
   <script>
+    // Prediction
     document.getElementById("predictForm").addEventListener("submit", async function (e) {
       e.preventDefault();
       const rawText = document.getElementById("closePrices").value;
@@ -96,7 +114,7 @@
 
       const data = await response.json();
       if (data.error) {
-        alert("Error: " + data.error);
+        alert("❌ " + data.error);
         return;
       }
 
@@ -108,11 +126,31 @@
       const signalElem = document.getElementById("signal");
       signalElem.innerText = data.signal;
       signalElem.classList.remove("signal-buy", "signal-sell", "signal-hold");
-      if (data.signal === "BUY") signalElem.classList.add("signal-buy");
-      else if (data.signal === "SELL") signalElem.classList.add("signal-sell");
-      else signalElem.classList.add("signal-hold");
+      signalElem.classList.add(
+        data.signal === "BUY" ? "signal-buy" :
+        data.signal === "SELL" ? "signal-sell" : "signal-hold"
+      );
 
       document.getElementById("result").style.display = "block";
+    });
+
+    // Subscription
+    document.getElementById("subscribeForm").addEventListener("submit", async function (e) {
+      e.preventDefault();
+      const email = document.getElementById("subEmail").value.trim();
+      const subMessage = document.getElementById("subMessage");
+
+      const response = await fetch("/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: `email=${encodeURIComponent(email)}`
+      });
+
+      if (response.redirected || response.status === 200 || response.status === 202) {
+        subMessage.innerHTML = `<span class="text-success">✅ Subscription successful!</span>`;
+      } else {
+        subMessage.innerHTML = `<span class="text-danger">❌ Failed to subscribe. Try again.</span>`;
+      }
     });
   </script>
 </body>

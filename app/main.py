@@ -1,53 +1,49 @@
-from fastapi import FastAPI, Request, Query
+from fastapi import FastAPI, Request, Query, Form
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from app.forecast_logic import forecast_next
 from pydantic import BaseModel
 from typing import List, Optional
+from app.forecast_logic import forecast_next
 
 app = FastAPI(
     title="XAUUSD Forecast API",
-    description="AI-powered forecast and trading signal generator for gold (XAUUSD) using XGBoost.",
+    description="Forecast & trading signal generator using XGBoost.",
     version="1.0.0"
 )
 
-# HTML template directory
-templates = Jinja2Templates(directory="templates")
-
-# CORS middleware setup (Allow all origins for dev; restrict in production)
+# Setup CORS (for frontend POSTs if needed)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Change to ["https://yourdomain.com"] in production
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"]
 )
 
-# Input schema for closing prices
-class PriceInput(BaseModel):
-    close_prices: List[float]
+templates = Jinja2Templates(directory="app/templates")
 
-# Root route for rendering frontend UI
+# === Routes ===
+
 @app.get("/", response_class=HTMLResponse)
 def read_root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
-# Health check route
+@app.post("/predict")
+def predict(close_prices: List[float] = Form(...), threshold: Optional[float] = Form(0.002)):
+    try:
+        result = forecast_next(close_prices, threshold)
+        return JSONResponse(content=result)
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=400)
+
+@app.post("/subscribe")
+async def subscribe(email: str = Form(...)):
+    import requests
+    response = requests.post("https://formspree.io/f/mpwrnoqv", data={"email": email})
+    if response.status_code in [200, 202]:
+        return RedirectResponse("/", status_code=303)
+    return JSONResponse({"error": "Subscription failed"}, status_code=500)
+
 @app.get("/ping")
 def ping():
     return {"status": "ok"}
-
-# Prediction route with optional threshold
-@app.post("/predict")
-def predict(input: PriceInput, threshold: Optional[float] = Query(0.002, ge=0, le=1)):
-    """
-    Forecast next gold price and trading signal.
-    Accepts last 60 close prices and an optional threshold for signal sensitivity.
-    """
-    try:
-        result = forecast_next(input.close_prices, threshold)
-        return JSONResponse(content=result)
-    except ValueError as ve:
-        return JSONResponse(content={"error": str(ve)}, status_code=422)
-    except Exception as e:
-        return JSONResponse(content={"error": "Server error", "details": str(e)}, status_code=500)

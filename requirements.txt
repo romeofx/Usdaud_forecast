@@ -1,11 +1,13 @@
-streamlit
-xgboost
-joblib
+streamlit==1.46.1
+xgboost==3.0.2
 numpy
-streamlit
-xgboost
-scikit-learn
 pandas
-matplotlib
+joblib
+requests
+fastapi
+uvicorn
+jinja2
+python-multipart
+
 
 
