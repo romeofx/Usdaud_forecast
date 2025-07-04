@@ -1,3 +1,5 @@
+# main.py
+
 from fastapi import FastAPI, Request, Form
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -6,14 +8,16 @@ from pydantic import BaseModel
 from typing import List, Optional
 import pandas as pd
 import json
+import requests
 
 from app.forecast_logic import forecast_next
+
 
 app = FastAPI()
 
 templates = Jinja2Templates(directory="templates")
 
-# CORS settings
+# === CORS Setup ===
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -21,21 +25,28 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
-# === Helper: Load the latest 60 close prices
-def load_last_60_prices():
+SEQUENCE_LENGTH = 350
+
+# === Helper to Load CSV Data ===
+def load_last_350_prices() -> str:
     try:
         df = pd.read_csv("xauusd_data.csv")
         if "close" not in df.columns:
             return ""
-        return ",".join([str(int(val)) for val in df["close"].tail(60)])
-    except Exception as e:
+        return ",".join([str(int(val)) for val in df["close"].tail(SEQUENCE_LENGTH)])
+    except Exception:
         return ""
 
+# === HTML Page ===
 @app.get("/", response_class=HTMLResponse)
-def read_root(request: Request):
-    last_60_prices = load_last_60_prices()
-    return templates.TemplateResponse("index.html", {"request": request, "last_60_prices": last_60_prices})
+def home(request: Request):
+    last_350_prices = load_last_350_prices()
+    return templates.TemplateResponse("index.html", {
+        "request": request,
+        "last_350_prices": last_350_prices
+    })
 
+# === JSON Prediction API ===
 @app.post("/predict")
 async def predict_api(request: Request, threshold: Optional[float] = 0.002):
     data = await request.json()
@@ -46,18 +57,19 @@ async def predict_api(request: Request, threshold: Optional[float] = 0.002):
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=400)
 
+# === Download prices ===
 @app.get("/download-prices")
 def download_prices():
-    text_data = load_last_60_prices()
+    prices = load_last_350_prices()
     return HTMLResponse(
-        content=text_data,
+        content=prices,
         media_type="text/plain",
-        headers={"Content-Disposition": "attachment; filename=last_60_prices.txt"}
+        headers={"Content-Disposition": "attachment; filename=last_350_prices.txt"}
     )
 
+# === Subscribe (Formspree handler) ===
 @app.post("/subscribe")
 def subscribe(name: str = Form(...), email: str = Form(...), message: str = Form("")):
-    import requests
     form_data = {"name": name, "email": email, "message": message}
     res = requests.post("https://formspree.io/f/mpwrnoqv", data=form_data)
     if res.status_code in [200, 202]:

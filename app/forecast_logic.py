@@ -1,13 +1,17 @@
+# forecast_logic.py
+
 import numpy as np
 import joblib
 import xgboost as xgb
 from pathlib import Path
 
-# === Load model and scaler safely once ===
+# === Constants ===
+SEQUENCE_LENGTH = 350
+
+# === Load model and scaler once ===
 MODEL_PATH = Path("models/xgboost_model.json")
 SCALER_PATH = Path("models/scaler.pkl")
 
-# Load once at the top level
 xgb_model = xgb.XGBRegressor()
 if MODEL_PATH.exists():
     xgb_model.load_model(str(MODEL_PATH))
@@ -21,7 +25,7 @@ else:
 
 
 def generate_signal(predicted_price: float, current_price: float, threshold: float = 0.002) -> str:
-    """Determine buy/sell/hold signal."""
+    """Determine buy/sell/hold signal based on predicted and current price."""
     diff_ratio = (predicted_price - current_price) / current_price
     if diff_ratio > threshold:
         return "BUY"
@@ -33,32 +37,30 @@ def generate_signal(predicted_price: float, current_price: float, threshold: flo
 def forecast_next(close_prices: list[float], threshold: float = 0.002) -> dict:
     """
     Forecast the next price and generate trading signal.
-    
+
     Args:
-        close_prices (list): Last 60 closing prices
-        threshold (float): Percentage threshold for decision logic
+        close_prices (list): Last 350 closing prices
+        threshold (float): Threshold to determine buy/sell/hold
 
     Returns:
-        dict: forecast result
+        dict: prediction result
     """
-    if len(close_prices) < 60:
-        raise ValueError("⚠️ Input must contain at least 60 closing prices.")
+    if len(close_prices) < SEQUENCE_LENGTH:
+        raise ValueError(f"⚠️ Input must contain at least {SEQUENCE_LENGTH} closing prices.")
 
-    # Prepare and scale the input
-    recent_data = np.array(close_prices[-60:]).reshape(-1, 1)
+    # Prepare input data
+    recent_data = np.array(close_prices[-SEQUENCE_LENGTH:]).reshape(-1, 1)
     scaled = scaler.transform(recent_data)
-    X_xgb = scaled.reshape(1, 60)
+    X_input = scaled.reshape(1, SEQUENCE_LENGTH)
 
-    # Predict next scaled value
-    predicted_scaled = xgb_model.predict(X_xgb)[0]
+    # Predict
+    predicted_scaled = xgb_model.predict(X_input)[0]
     predicted_price = scaler.inverse_transform([[predicted_scaled]])[0][0]
     current_price = close_prices[-1]
-
-    # Get signal
     signal = generate_signal(predicted_price, current_price, threshold)
 
-    # TP/SL logic based on signal
-    buffer = 0.005  # ±0.5%
+    # Calculate TP and SL
+    buffer = 0.005
     if signal == "BUY":
         tp = predicted_price * (1 + buffer)
         sl = predicted_price * (1 - buffer)
