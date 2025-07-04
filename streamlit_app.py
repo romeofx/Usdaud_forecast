@@ -37,7 +37,7 @@ st.markdown("""
 
 # === App Title ===
 st.title("📈 Gold Price Forecast (XAUUSD)")
-st.markdown(f"AI-powered prediction & trading signal generator using XGBoost ({SEQUENCE_LENGTH} inputs)")
+st.markdown("AI-powered prediction & trading signal generator using XGBoost")
 
 # === Load latest 350 prices from CSV without decimals ===
 def load_last_prices(n=SEQUENCE_LENGTH):
