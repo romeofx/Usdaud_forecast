@@ -50,10 +50,10 @@
       </div>
 
       <!-- Prediction Form -->
-      <form method="post" action="/predict" id="predictForm">
+      <form id="predictForm">
         <div class="mb-3">
           <label for="closePrices" class="form-label">Enter last 60 close prices (comma-separated)</label>
-          <textarea class="form-control" id="closePrices" name="close_prices" rows="4" required></textarea>
+          <textarea class="form-control" id="closePrices" name="close_prices" rows="4" required>{{ last_60_prices or "" }}</textarea>
         </div>
         <div class="mb-3">
           <label for="threshold" class="form-label">Threshold (default: 0.002)</label>
@@ -76,18 +76,24 @@
       </div>
     </div>
 
-    <!-- Email Subscription Form -->
+    <!-- Email Contact Form -->
     <div class="glass-card p-4">
       <div class="text-center mb-3">
-        <h4 class="gold-accent">💌 Stay Updated</h4>
-        <p class="text-muted">Get email alerts for trading signals</p>
+        <h4 class="gold-accent">💬 Contact & Subscribe</h4>
+        <p class="text-muted">Send a message or subscribe for updates</p>
       </div>
 
       <form method="post" action="/subscribe" id="subscribeForm">
         <div class="mb-3">
-          <input type="email" class="form-control" name="email" id="subEmail" placeholder="Your email address" required>
+          <input type="text" class="form-control" name="name" placeholder="Your name" required>
         </div>
-        <button type="submit" class="btn btn-gold w-100">📬 Subscribe</button>
+        <div class="mb-3">
+          <input type="email" class="form-control" name="email" placeholder="Your email" required>
+        </div>
+        <div class="mb-3">
+          <textarea class="form-control" name="message" rows="3" placeholder="Your message (optional)"></textarea>
+        </div>
+        <button type="submit" class="btn btn-gold w-100">📬 Send & Subscribe</button>
       </form>
 
       <div id="subMessage" class="text-center mt-3"></div>
@@ -95,7 +101,7 @@
   </div>
 
   <script>
-    // Enhance Predict Form (AJAX behavior)
+    // Prediction AJAX
     document.getElementById("predictForm").addEventListener("submit", async function (e) {
       e.preventDefault();
       const rawText = document.getElementById("closePrices").value;
@@ -117,7 +123,7 @@
         });
         const data = await response.json();
         if (data.error) {
-          alert("Error: " + data.error);
+          alert("❌ Error: " + data.error);
         } else {
           document.getElementById("predictedPrice").textContent = data.predicted_price;
           document.getElementById("currentPrice").textContent = data.current_price;
@@ -140,10 +146,9 @@
       }
     });
 
-    // Subscribe form feedback
-    document.getElementById("subscribeForm").addEventListener("submit", function (e) {
-      const subMsg = document.getElementById("subMessage");
-      subMsg.innerHTML = '<span class="text-warning">⏳ Subscribing...</span>';
+    // Subscribe feedback
+    document.getElementById("subscribeForm").addEventListener("submit", function () {
+      document.getElementById("subMessage").innerHTML = '<span class="text-warning">⏳ Sending...</span>';
     });
   </script>
 </body>
