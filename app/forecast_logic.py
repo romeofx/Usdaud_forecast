@@ -7,7 +7,7 @@ from typing import List, Optional
 import pandas as pd
 import os
 
-from app.forecast_logic import forecast_next
+#from app.forecast_logic import forecast_next
 
 app = FastAPI(
     title="XAUUSD Forecast API",
