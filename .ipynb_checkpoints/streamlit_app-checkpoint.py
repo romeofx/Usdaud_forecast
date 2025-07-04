@@ -5,15 +5,12 @@ import joblib
 import xgboost as xgb
 import requests
 
-# === Config ===
-SEQUENCE_LENGTH = 350
-
-# === Load model and scaler ===
+# === Load model and scaler
 xgb_model = xgb.XGBRegressor()
 xgb_model.load_model("models/xgboost_model.json")
 scaler = joblib.load("models/scaler.pkl")
 
-# === Custom CSS for dark theme ===
+# === Custom CSS (Dark theme + Bootstrap feel)
 st.markdown("""
     <style>
     body {
@@ -35,23 +32,23 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# === App Title ===
+# === App Title
 st.title("📈 Gold Price Forecast (XAUUSD)")
-st.markdown(f"AI-powered prediction & trading signal generator using XGBoost ({SEQUENCE_LENGTH} inputs)")
+st.markdown("AI-powered prediction & trading signal generator using XGBoost")
 
-# === Load latest 350 prices from CSV without decimals ===
-def load_last_prices(n=SEQUENCE_LENGTH):
+# === Helper: Load the latest 60 close prices
+def load_last_60_prices():
     try:
         df = pd.read_csv("xauusd_data.csv")
         if "close" not in df.columns:
             st.warning("⚠️ 'close' column not found in CSV.")
             return ""
-        return ",".join([str(int(round(val))) for val in df["close"].tail(n)])
+        return ",".join([str(int(val)) for val in df["close"].tail(60)])
     except Exception as e:
         st.warning(f"⚠️ Failed to load dataset: {e}")
         return ""
 
-# === Signal generation logic ===
+# === Signal generation logic
 def generate_signal(predicted_price, current_price, threshold=0.002):
     diff_ratio = (predicted_price - current_price) / current_price
     if diff_ratio > threshold:
@@ -61,14 +58,15 @@ def generate_signal(predicted_price, current_price, threshold=0.002):
     else:
         return "HOLD"
 
-# === Forecast function ===
+# === Forecast logic
 def forecast_next(close_prices: list, threshold: float = 0.002):
-    if len(close_prices) < SEQUENCE_LENGTH:
-        raise ValueError(f"Input must have at least {SEQUENCE_LENGTH} closing prices.")
-    recent_data = np.array(close_prices[-SEQUENCE_LENGTH:]).reshape(-1, 1)
+    if len(close_prices) < 60:
+        raise ValueError("Input must have at least 60 closing prices.")
+    recent_data = np.array(close_prices[-60:]).reshape(-1, 1)
     scaled = scaler.transform(recent_data)
-    X_input = scaled.reshape(1, SEQUENCE_LENGTH)
-    predicted_scaled = xgb_model.predict(X_input)[0]
+    X_xgb = scaled.reshape(1, 60)
+    xgb_pred = xgb_model.predict(X_xgb)
+    predicted_scaled = xgb_pred[0]
     predicted_price = scaler.inverse_transform([[predicted_scaled]])[0][0]
     current_price = close_prices[-1]
     signal = generate_signal(predicted_price, current_price, threshold)
@@ -89,56 +87,36 @@ def forecast_next(close_prices: list, threshold: float = 0.002):
         "stop_loss": round(sl, 3)
     }
 
-# === Load prices and display ===
-last_350_prices = load_last_prices()
+# === Load prices and display download section
+last_60_prices = load_last_60_prices()
 
-with st.expander(f"📥 Auto-filled Last {SEQUENCE_LENGTH} Close Prices"):
-    st.code(last_350_prices, language="text")
+with st.expander("📥 Auto-filled Last 60 Close Prices"):
+    st.code(last_60_prices, language="text")
     st.download_button(
         label="⬇️ Download Prices",
-        data=last_350_prices,
-        file_name=f"last_{SEQUENCE_LENGTH}_prices.txt",
+        data=last_60_prices,
+        file_name="last_60_prices.txt",
         mime="text/plain"
     )
 
-# === Input from user ===
-st.subheader(f"Enter {SEQUENCE_LENGTH} closing prices:")
-user_input = st.text_area("Closing prices (comma-separated)", value=last_350_prices, height=200)
+# === Input from user
+st.subheader("Enter 60 closing prices:")
+user_input = st.text_area("Closing prices (comma-separated)", value=last_60_prices, height=150)
 threshold = st.slider("Signal Threshold", 0.0, 0.05, 0.002, step=0.001)
 
-# === Predict ===
+# === Predict
 if st.button("🔮 Predict"):
     try:
         prices = [float(x.strip()) for x in user_input.split(",") if x.strip()]
         result = forecast_next(prices, threshold)
-
-        st.success("📊 Prediction Result:")
-        st.markdown(f"**Predicted Price:** ${result['predicted_price']}")
-        st.markdown(f"**Current Price:** ${result['current_price']}")
-        st.markdown(f"**Signal:** 🚩 `{result['signal']}`")
-        st.markdown(f"✅ **Take Profit:** ${result['take_profit']}")
-        st.markdown(f"❌ **Stop Loss:** ${result['stop_loss']}")
-
-        # Download button
-        result_text = (
-            f"📊 Prediction Result:\n"
-            f"Predicted Price: {result['predicted_price']}\n"
-            f"Current Price: {result['current_price']}\n"
-            f"Signal: {result['signal']}\n"
-            f"Take Profit: {result['take_profit']}\n"
-            f"Stop Loss: {result['stop_loss']}"
-        )
-        st.download_button(
-            label="📄 Download Result",
-            data=result_text,
-            file_name="prediction_result.txt",
-            mime="text/plain"
-        )
-
+        st.success(f"📊 Predicted Price: ${result['predicted_price']}")
+        st.info(f"💡 Signal: {result['signal']}")
+        st.markdown(f"✅ Take Profit: ${result['take_profit']}")
+        st.markdown(f"❌ Stop Loss: ${result['stop_loss']}")
     except Exception as e:
         st.error(f"⚠️ Error: {e}")
 
-# === Contact Form ===
+# === Contact Form (Formspree)
 st.markdown("---")
 st.subheader("📬 Stay Updated with Trading Signals")
 
@@ -157,12 +135,13 @@ with st.form("contact_form", clear_on_submit=True):
                 "email": email,
                 "message": message
             }
-            formspree_url = "https://formspree.io/f/mpwrnoqv"  # replace with your Formspree URL
+            formspree_url = "https://formspree.io/f/mpwrnoqv"  # Your actual endpoint
             try:
                 response = requests.post(formspree_url, data=form_data)
-                if response.status_code in [200, 202]:
+                if response.status_code == 200 or response.status_code == 202:
                     st.success("✅ Message sent successfully!")
                 else:
                     st.error(f"❌ Failed to send message. (Status: {response.status_code})")
             except Exception as e:
                 st.error(f"⚠️ Error sending message: {e}")
+
