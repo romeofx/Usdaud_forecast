@@ -4,7 +4,7 @@ from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
-from app.forecast_logic import forecast_next
+#from app.forecast_logic import forecast_next
 
 app = FastAPI(
     title="XAUUSD Forecast API",
