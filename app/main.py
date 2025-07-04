@@ -12,7 +12,10 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS setup (safe for public frontend calls)
+# Correct template directory — root-level /templates
+templates = Jinja2Templates(directory="templates")
+
+# Enable CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -20,36 +23,26 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
-# Templates directory
-templates = Jinja2Templates(directory="templates")
-
-# === HTML Home ===
 @app.get("/", response_class=HTMLResponse)
 def read_root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
-# === JSON API Prediction ===
-class PriceInput(BaseModel):
-    close_prices: List[float]
-
 @app.post("/predict")
-def predict(input: PriceInput, threshold: float = Query(0.002, ge=0, le=1)):
+def predict(close_prices: List[float] = Form(...), threshold: Optional[float] = Form(0.002)):
     try:
-        result = forecast_next(input.close_prices, threshold)
+        result = forecast_next(close_prices, threshold)
         return JSONResponse(content=result)
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=400)
 
-# === Email subscription (Formspree) ===
 @app.post("/subscribe")
-async def subscribe(email: str = Form(...)):
+def subscribe(email: str = Form(...)):
     import requests
-    response = requests.post("https://formspree.io/f/mpwrnoqv", data={"email": email})
-    if response.status_code in [200, 202]:
+    res = requests.post("https://formspree.io/f/mpwrnoqv", data={"email": email})
+    if res.status_code in [200, 202]:
         return RedirectResponse("/", status_code=303)
     return JSONResponse({"error": "Subscription failed"}, status_code=500)
 
-# === Health check ===
 @app.get("/ping")
 def ping():
     return {"status": "ok"}
