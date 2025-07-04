@@ -42,6 +42,14 @@
     input[type=range]::-webkit-slider-thumb {
       background: #FFD700;
     }
+    .download-link {
+      text-decoration: none;
+      color: #FFD700;
+      font-weight: 500;
+    }
+    .download-link:hover {
+      text-decoration: underline;
+    }
   </style>
 </head>
 <body>
@@ -60,10 +68,15 @@
         </div>
         <div class="mb-3">
           <label for="threshold" class="form-label">Adjust Threshold: <span id="thValue">0.002</span></label>
-          <input type="range" class="form-range" id="threshold" name="threshold" min="0.000" max="0.050" step="0.001" value="0.002" oninput="document.getElementById('thValue').textContent = this.value">
+          <input type="range" class="form-range" id="threshold" name="threshold" min="0.000" max="0.050" step="0.001" value="0.002"
+                 oninput="document.getElementById('thValue').textContent = this.value">
         </div>
-        <button type="submit" class="btn btn-gold w-100">🔍 Predict</button>
+        <button type="submit" class="btn btn-gold w-100 mb-2">🔍 Predict</button>
       </form>
+
+      <div class="text-center mt-1">
+        <a href="/download-prices" class="download-link">⬇️ Download Last 60 Prices</a>
+      </div>
 
       <div id="loading" class="text-center mt-3 text-warning" style="display: none;">⏳ Predicting...</div>
 
