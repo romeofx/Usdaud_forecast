@@ -12,7 +12,7 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Setup CORS (for frontend POSTs if needed)
+# CORS setup (safe for public frontend calls)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -20,22 +20,27 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
-templates = Jinja2Templates(directory="app/templates")
+# Templates directory
+templates = Jinja2Templates(directory="templates")
 
-# === Routes ===
-
+# === HTML Home ===
 @app.get("/", response_class=HTMLResponse)
 def read_root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
+# === JSON API Prediction ===
+class PriceInput(BaseModel):
+    close_prices: List[float]
+
 @app.post("/predict")
-def predict(close_prices: List[float] = Form(...), threshold: Optional[float] = Form(0.002)):
+def predict(input: PriceInput, threshold: float = Query(0.002, ge=0, le=1)):
     try:
-        result = forecast_next(close_prices, threshold)
+        result = forecast_next(input.close_prices, threshold)
         return JSONResponse(content=result)
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=400)
 
+# === Email subscription (Formspree) ===
 @app.post("/subscribe")
 async def subscribe(email: str = Form(...)):
     import requests
@@ -44,6 +49,7 @@ async def subscribe(email: str = Form(...)):
         return RedirectResponse("/", status_code=303)
     return JSONResponse({"error": "Subscription failed"}, status_code=500)
 
+# === Health check ===
 @app.get("/ping")
 def ping():
     return {"status": "ok"}
