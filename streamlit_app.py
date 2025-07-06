@@ -5,15 +5,15 @@ import joblib
 import xgboost as xgb
 import requests
 
-# === Config ===
-SEQUENCE_LENGTH = 350
+# === Configuration ===
+SEQUENCE_LENGTH = 600  # Changed from 350 to 600
 
-# === Load model and scaler ===
+# === Load Model and Scaler ===
 xgb_model = xgb.XGBRegressor()
 xgb_model.load_model("models/xgboost_model.json")
 scaler = joblib.load("models/scaler.pkl")
 
-# === Custom CSS for dark theme ===
+# === Custom CSS for Dark Theme ===
 st.markdown("""
     <style>
     body {
@@ -39,7 +39,7 @@ st.markdown("""
 st.title("📈 Gold Price Forecast (XAUUSD)")
 st.markdown("AI-powered prediction & trading signal generator using XGBoost")
 
-# === Load latest 350 prices from CSV without decimals ===
+# === Load Latest 600 Prices from CSV ===
 def load_last_prices(n=SEQUENCE_LENGTH):
     try:
         df = pd.read_csv("xauusd_data.csv")
@@ -51,17 +51,16 @@ def load_last_prices(n=SEQUENCE_LENGTH):
         st.warning(f"⚠️ Failed to load dataset: {e}")
         return ""
 
-# === Signal generation logic ===
+# === Signal Generation Logic ===
 def generate_signal(predicted_price, current_price, threshold=0.002):
     diff_ratio = (predicted_price - current_price) / current_price
     if diff_ratio > threshold:
         return "BUY"
     elif diff_ratio < -threshold:
         return "SELL"
-    else:
-        return "HOLD"
+    return "HOLD"
 
-# === Forecast function ===
+# === Forecast Function ===
 def forecast_next(close_prices: list, threshold: float = 0.002):
     if len(close_prices) < SEQUENCE_LENGTH:
         raise ValueError(f"Input must have at least {SEQUENCE_LENGTH} closing prices.")
@@ -71,6 +70,7 @@ def forecast_next(close_prices: list, threshold: float = 0.002):
     predicted_scaled = xgb_model.predict(X_input)[0]
     predicted_price = scaler.inverse_transform([[predicted_scaled]])[0][0]
     current_price = close_prices[-1]
+
     signal = generate_signal(predicted_price, current_price, threshold)
     buffer = 0.005
     if signal == "BUY":
@@ -81,6 +81,7 @@ def forecast_next(close_prices: list, threshold: float = 0.002):
         sl = predicted_price * (1 + buffer)
     else:
         tp = sl = predicted_price
+
     return {
         "predicted_price": round(predicted_price, 3),
         "current_price": round(current_price, 3),
@@ -89,24 +90,24 @@ def forecast_next(close_prices: list, threshold: float = 0.002):
         "stop_loss": round(sl, 3)
     }
 
-# === Load prices and display ===
-last_350_prices = load_last_prices()
+# === Load & Display Prices ===
+last_600_prices = load_last_prices()
 
 with st.expander(f"📥 Auto-filled Last {SEQUENCE_LENGTH} Close Prices"):
-    st.code(last_350_prices, language="text")
+    st.code(last_600_prices, language="text")
     st.download_button(
         label="⬇️ Download Prices",
-        data=last_350_prices,
+        data=last_600_prices,
         file_name=f"last_{SEQUENCE_LENGTH}_prices.txt",
         mime="text/plain"
     )
 
-# === Input from user ===
+# === Input Section ===
 st.subheader(f"Enter {SEQUENCE_LENGTH} closing prices:")
-user_input = st.text_area("Closing prices (comma-separated)", value=last_350_prices, height=200)
+user_input = st.text_area("Closing prices (comma-separated)", value=last_600_prices, height=200)
 threshold = st.slider("Signal Threshold", 0.0, 0.05, 0.002, step=0.001)
 
-# === Predict ===
+# === Prediction Trigger ===
 if st.button("🔮 Predict"):
     try:
         prices = [float(x.strip()) for x in user_input.split(",") if x.strip()]
@@ -119,7 +120,6 @@ if st.button("🔮 Predict"):
         st.markdown(f"✅ **Take Profit:** ${result['take_profit']}")
         st.markdown(f"❌ **Stop Loss:** ${result['stop_loss']}")
 
-        # Download button
         result_text = (
             f"📊 Prediction Result:\n"
             f"Predicted Price: {result['predicted_price']}\n"
@@ -134,7 +134,6 @@ if st.button("🔮 Predict"):
             file_name="prediction_result.txt",
             mime="text/plain"
         )
-
     except Exception as e:
         st.error(f"⚠️ Error: {e}")
 
@@ -157,7 +156,7 @@ with st.form("contact_form", clear_on_submit=True):
                 "email": email,
                 "message": message
             }
-            formspree_url = "https://formspree.io/f/mpwrnoqv"  # replace with your Formspree URL
+            formspree_url = "https://formspree.io/f/mpwrnoqv"
             try:
                 response = requests.post(formspree_url, data=form_data)
                 if response.status_code in [200, 202]:
