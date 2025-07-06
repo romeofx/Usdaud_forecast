@@ -1,14 +1,9 @@
-# forecast_logic.py
-
 import numpy as np
 import joblib
 import xgboost as xgb
 from pathlib import Path
 
-# === Constants ===
-SEQUENCE_LENGTH = 350
-
-# === Load model and scaler once ===
+SEQUENCE_LENGTH = 600
 MODEL_PATH = Path("models/xgboost_model.json")
 SCALER_PATH = Path("models/scaler.pkl")
 
@@ -23,9 +18,7 @@ if SCALER_PATH.exists():
 else:
     raise FileNotFoundError("❌ Scaler file not found at models/scaler.pkl")
 
-
 def generate_signal(predicted_price: float, current_price: float, threshold: float = 0.002) -> str:
-    """Determine buy/sell/hold signal based on predicted and current price."""
     diff_ratio = (predicted_price - current_price) / current_price
     if diff_ratio > threshold:
         return "BUY"
@@ -33,34 +26,20 @@ def generate_signal(predicted_price: float, current_price: float, threshold: flo
         return "SELL"
     return "HOLD"
 
-
 def forecast_next(close_prices: list[float], threshold: float = 0.002) -> dict:
-    """
-    Forecast the next price and generate trading signal.
-
-    Args:
-        close_prices (list): Last 350 closing prices
-        threshold (float): Threshold to determine buy/sell/hold
-
-    Returns:
-        dict: prediction result
-    """
     if len(close_prices) < SEQUENCE_LENGTH:
         raise ValueError(f"⚠️ Input must contain at least {SEQUENCE_LENGTH} closing prices.")
 
-    # Prepare input data
     recent_data = np.array(close_prices[-SEQUENCE_LENGTH:]).reshape(-1, 1)
     scaled = scaler.transform(recent_data)
     X_input = scaled.reshape(1, SEQUENCE_LENGTH)
 
-    # Predict
     predicted_scaled = xgb_model.predict(X_input)[0]
     predicted_price = scaler.inverse_transform([[predicted_scaled]])[0][0]
     current_price = close_prices[-1]
     signal = generate_signal(predicted_price, current_price, threshold)
 
-    # Calculate TP and SL
-    buffer = 0.005
+    buffer = 0.001
     if signal == "BUY":
         tp = predicted_price * (1 + buffer)
         sl = predicted_price * (1 - buffer)

@@ -63,8 +63,8 @@
       <!-- Prediction Form -->
       <form id="predictForm">
         <div class="mb-3">
-          <label for="closePrices" class="form-label">Enter last 350 close prices (comma-separated)</label>
-          <textarea class="form-control" id="closePrices" name="close_prices" rows="4" required>{{ last_350_prices or "" }}</textarea>
+          <label for="closePrices" class="form-label">Enter last 600 close prices (comma-separated)</label>
+          <textarea class="form-control" id="closePrices" name="close_prices" rows="6" required>{{ last_600_prices or "" }}</textarea>
         </div>
         <div class="mb-3">
           <label for="threshold" class="form-label">Adjust Threshold: <span id="thValue">0.002</span></label>
@@ -75,7 +75,7 @@
       </form>
 
       <div class="text-center mt-1">
-        <a href="/download-prices" class="download-link">⬇️ Download Last 350 Prices</a>
+        <a href="/download-prices" class="download-link">⬇️ Download Last 600 Prices</a>
       </div>
 
       <div id="loading" class="text-center mt-3 text-warning" style="display: none;">⏳ Predicting...</div>
@@ -124,8 +124,8 @@
       const threshold = document.getElementById("threshold").value || "0.002";
       const closePrices = rawText.split(',').map(x => parseFloat(x.trim())).filter(x => !isNaN(x));
 
-      if (closePrices.length !== 350) {
-        alert("❌ Please enter exactly 350 closing prices.");
+      if (closePrices.length !== 600) {
+        alert("❌ Please enter exactly 600 closing prices.");
         return;
       }
 
