@@ -72,7 +72,7 @@ def forecast_next(close_prices: list, threshold: float = 0.002):
     current_price = close_prices[-1]
 
     signal = generate_signal(predicted_price, current_price, threshold)
-    buffer = 0.005
+    buffer = 0.001
     if signal == "BUY":
         tp = predicted_price * (1 + buffer)
         sl = predicted_price * (1 - buffer)
